@@ -1,17 +1,9 @@
 import os
 from transformers.utils import logging
-from huggingface_hub import hf_hub_download
-
 
 logger = logging.get_logger(__name__)
 WEIGHTS_NAME = "mp_rank_00_model_states.pt"
 DEEPSPEED_CONFIG_NAME = "deepspeed_config.json"
-
-
-def download_model_files(pretrained_model_name_or_path):
-    weights_path = hf_hub_download(pretrained_model_name_or_path, WEIGHTS_NAME)
-    deepspeed_config_path = hf_hub_download(pretrained_model_name_or_path, DEEPSPEED_CONFIG_NAME)
-    return weights_path, deepspeed_config_path
 
 
 def download_file_from_hf(pretrained_model_name_or_path: str, file_name: str) -> str:

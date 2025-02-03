@@ -7,13 +7,14 @@ from typing import Union, Iterable
 import numpy as np
 import torch
 from deepspeed import DeepSpeedConfig
+from huggingface_hub import hf_hub_download
 from torch.nn import CrossEntropyLoss
 from transformers import GPT2Tokenizer, PreTrainedModel, PretrainedConfig
 
 from src import mpu
 from .fp16 import FP16_Module
 from .model import GPT3Model
-from .download_utils import download_model_files, DEEPSPEED_CONFIG_NAME, hf_hub_download
+from .download_utils import WEIGHTS_NAME, DEEPSPEED_CONFIG_NAME
 from transformers.utils import logging
 
 
@@ -179,7 +180,7 @@ class RuGPT3XL(PreTrainedModel):
         tokenizer = GPT2Tokenizer.from_pretrained(model_name_or_path)
         logger.info("Check cached model files...")
         if weights_path is None:
-            weights_path, deepspeed_config_path = download_model_files(model_name_or_path)
+            weights_path = hf_hub_download(model_name_or_path, WEIGHTS_NAME)
         if deepspeed_config_path is None:
             deepspeed_config_path = hf_hub_download(model_name_or_path, DEEPSPEED_CONFIG_NAME)
         model = setup_model(weights_path, deepspeed_config_path)

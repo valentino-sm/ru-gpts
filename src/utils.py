@@ -19,6 +19,7 @@ import os
 import random
 import time
 
+from huggingface_hub import hf_hub_download
 import numpy as np
 import torch
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
@@ -27,7 +28,7 @@ from src import mpu
 from src.fp16 import FP16_Optimizer, FP16_Module
 from src.model import DistributedDataParallel as DDP
 import os
-from src.download_utils import download_model_files
+from src.download_utils import WEIGHTS_NAME
 
 
 class DeepSpeedImportWrap(object):
@@ -477,7 +478,7 @@ def load_huggingface_model(model, path, double_pos_embeddings):
         model2fill = model2fill.module
     
     if path == "sberbank-ai/rugpt3xl":
-        weights_path, _ = download_model_files("sberbank-ai/rugpt3xl")
+        weights_path = hf_hub_download("sberbank-ai/rugpt3xl", WEIGHTS_NAME)
         checkpoint = torch.load(weights_path, map_location=lambda storage, loc: storage)['module']
         model2fill.load_state_dict(checkpoint)
     else:
