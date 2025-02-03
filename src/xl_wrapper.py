@@ -6,6 +6,10 @@ from typing import Union, Iterable
 
 import numpy as np
 import torch
+if os.environ.get("FORCE_CPU", "0").lower() in ["1", "true", "yes"]:
+    device = torch.device('cpu')
+else:
+    device = torch.device('cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu'))
 from deepspeed import DeepSpeedConfig
 from huggingface_hub import hf_hub_download
 from torch.nn import CrossEntropyLoss
@@ -71,7 +75,7 @@ def get_model(deepspeed_config_path):
                       deepspeed_sparsity_config=deepspeed_sparsity_config,
                       sparse_mode=sparse_mode)
     # GPU allocation.
-    model.cuda(torch.cuda.current_device())
+    model.to(device)
 
     # Fp16 conversion.
     model = FP16_Module(model)
@@ -165,18 +169,14 @@ class RuGPT3XL(PreTrainedModel):
 
     @classmethod
     def from_pretrained(cls, model_name_or_path=None, seq_len=512, weights_path=None, deepspeed_config_path=None):
-        init_method = 'tcp://' + os.getenv('MASTER_ADDR', 'localhost') + ':' + os.getenv('MASTER_PORT', '6000')
-        try:
-            torch.distributed.init_process_group(backend='nccl', world_size=1, rank=0, init_method=init_method)
-            mpu.initialize_model_parallel(1)
-        except RuntimeError:
-            print("The default process group has already initialized...")
+        # Distributed initialization removed for single GPU inference.
 
         seed = 1234
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
-        mpu.model_parallel_cuda_manual_seed(seed)
+        if torch.distributed.is_initialized():
+            mpu.model_parallel_cuda_manual_seed(seed)
         tokenizer = GPT2Tokenizer.from_pretrained(model_name_or_path)
         logger.info("Check cached model files...")
         if weights_path is None:
@@ -184,7 +184,7 @@ class RuGPT3XL(PreTrainedModel):
         if deepspeed_config_path is None:
             deepspeed_config_path = hf_hub_download(model_name_or_path, DEEPSPEED_CONFIG_NAME)
         model = setup_model(weights_path, deepspeed_config_path)
-        model.cuda()
+        model.to(device)
         model = model.eval()
         return cls(model, tokenizer=tokenizer, seq_len=seq_len, model_path=model_name_or_path)
 
@@ -215,7 +215,7 @@ class RuGPT3XL(PreTrainedModel):
             use_cache: Union[bool, NoneType] = None,
             **model_kwargs):
         if text is not None:
-            input_ids = torch.cuda.LongTensor([self.tokenizer(text)['input_ids']])
+            input_ids = torch.tensor([self.tokenizer(text)['input_ids']], device=device, dtype=torch.long)
         if eos_token_id is None:
             eos_token_id = self.eos_token_id
         if pad_token_id is None:
@@ -248,11 +248,11 @@ class RuGPT3XL(PreTrainedModel):
         if input_ids is None:
             if text is None:
                 text = ""
-            input_ids = torch.cuda.LongTensor([self.tokenizer(text)['input_ids']])
+            input_ids = torch.tensor([self.tokenizer(text)['input_ids']], device=device, dtype=torch.long)
         if isinstance(input_ids, list):
-            input_ids = torch.cuda.LongTensor(input_ids)
+            input_ids = torch.tensor(input_ids, device=device, dtype=torch.long)
         if isinstance(labels, list):
-            labels = torch.cuda.LongTensor(labels)
+            labels = torch.tensor(labels, device=device, dtype=torch.long)
         res = []
         if labels is not None:
             lbls = labels
@@ -279,19 +279,15 @@ class RuGPT3XL(PreTrainedModel):
                 if labels is not None:
                     lbl = lbl.tolist()[-2048:]
                     lbl = torch.cuda.LongTensor(lbl)
-            context_tokens_tensor = torch.cuda.LongTensor(context_tokens)
-            context_length_tensor = torch.cuda.LongTensor([context_length])
+            context_tokens_tensor = torch.tensor(context_tokens, device=device, dtype=torch.long)
+            context_length_tensor = torch.tensor([context_length], device=device, dtype=torch.long)
 
-            torch.distributed.broadcast(context_length_tensor, mpu.get_model_parallel_src_rank(),
-                                        group=mpu.get_model_parallel_group())
-            torch.distributed.broadcast(context_tokens_tensor, mpu.get_model_parallel_src_rank(),
-                                        group=mpu.get_model_parallel_group())
 
             # context_length = context_length_tensor[0].item()
 
             tokens = context_tokens_tensor
             tokens = tokens.view(1, -1).contiguous()
-            tokens = tokens.to(torch.cuda.current_device())
+            tokens = tokens.to(device)
             attention_mask, loss_mask, position_ids = get_masks_and_position_ids(tokens, self.pad_token_id, False,
                                                                                  False)
             lm_logits = self.model(tokens, position_ids, attention_mask)

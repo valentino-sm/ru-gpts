@@ -23,8 +23,8 @@ def _reduce(input_):
     """All-reduce the the input tensor across model parallel group."""
     group = get_model_parallel_group()
 
-    # Bypass the function if we are using only 1 GPU.
-    if torch.distributed.get_world_size(group=group) == 1:
+    # Bypass the function if distributed is not initialized or using only one GPU.
+    if not torch.distributed.is_initialized() or group is None or torch.distributed.get_world_size(group=group) == 1:
         return input_
 
     # All-reduce.
@@ -38,8 +38,8 @@ def _split(input_):
     corresponding slice."""
     group = get_model_parallel_group()
 
-    # Bypass the function if we are using only 1 GPU.
-    if torch.distributed.get_world_size(group=group) == 1:
+    # Bypass the function if distributed is not initialized or using only one GPU.
+    if not torch.distributed.is_initialized() or group is None or torch.distributed.get_world_size(group=group) == 1:
         return input_
 
     # Split along last dimension.
@@ -57,8 +57,8 @@ def _gather(input_):
     """Gather tensors and concatinate along the last dimension."""
     group = get_model_parallel_group()
 
-    # Bypass the function if we are using only 1 GPU.
-    if torch.distributed.get_world_size(group=group) == 1:
+    # Bypass the function if distributed is not initialized or using only one GPU.
+    if not torch.distributed.is_initialized() or group is None or torch.distributed.get_world_size(group=group) == 1:
         return input_
 
     # Size and dimension.
