@@ -77,8 +77,9 @@ def get_model(deepspeed_config_path):
     # GPU allocation.
     model.to(device)
 
-    # Fp16 conversion.
-    model = FP16_Module(model)
+    # Fp16 conversion only for non-CPU devices.
+    if device.type != 'cpu':
+        model = FP16_Module(model)
 
     return model
 
@@ -273,12 +274,12 @@ class RuGPT3XL(PreTrainedModel):
                 if labels is not None:
                     lbl = lbl.tolist()
                     lbl.extend([self.pad_token_id] * (seq_len - context_length))
-                    lbl = torch.cuda.LongTensor(lbl)
+                    lbl = torch.tensor(lbl, device=device, dtype=torch.long)
             if context_length > 2048:
                 context_tokens = context_tokens[-2048:]
                 if labels is not None:
                     lbl = lbl.tolist()[-2048:]
-                    lbl = torch.cuda.LongTensor(lbl)
+                    lbl = torch.tensor(lbl, device=device, dtype=torch.long)
             context_tokens_tensor = torch.tensor(context_tokens, device=device, dtype=torch.long)
             context_length_tensor = torch.tensor([context_length], device=device, dtype=torch.long)
 
