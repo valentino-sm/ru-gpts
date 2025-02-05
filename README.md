@@ -14,10 +14,18 @@ The source code and weights are exactly the same as in the original.
 
 ## Setup
 
-First, get [Poetry](https://python-poetry.org/). Install everything with:
+Use either:
+
+### Poetry
 
 ```bash
 poetry install
+```
+
+### Pip
+
+```bash
+pip install transformers deepspeed
 ```
 
 ## Usage
@@ -25,13 +33,13 @@ poetry install
 Run the model with:
 
 ```bash
-poetry run python run.py
+python run.py
 ```
 
 To use only the CPU:
 
 ```bash
-FORCE_CPU=1 poetry run python run.py
+FORCE_CPU=1 python run.py
 ```
 
 ```plaintext
@@ -42,8 +50,6 @@ Function generate Took 17.5580 seconds
 Token speed: 2.75 tokens/sec
 ['Кто был президентом США в 2020? \nВ этом году выборы президента Соединенных Штатов Америки пройдут уже через несколько дней. И, как и всегда на протяжении ...']
 ```
-
-*Note:* Actual output may vary depending on your device and inference settings.
 
 ## Speed Test Results
 
