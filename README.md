@@ -57,8 +57,8 @@ Token speed: 2.75 tokens/sec
 |---------------------------------------|---------------------|
 | RTX 3080 10GB                 | 26.78 tokens/sec    |
 | RTX 3070 8GB                  | 15.20 tokens/sec    |
-| M1 Pro (MPS/Neural Engine)    | 2.75 tokens/sec     |
-| M1 Pro (CPU)                  | 0.66 tokens/sec     |
+| M1 Pro MPS/GPU                | 2.75 tokens/sec     |
+| M1 Pro CPU                    | 0.66 tokens/sec     |
 
 ## License
 
